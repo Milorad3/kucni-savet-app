@@ -12,19 +12,22 @@ def create_meeting(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.require_admin),
 ):
-    # company_admin upravlja vise zgrada pa MORA da kaze za koju je sastanak;
-    # obican admin (predsednik) ima samo jednu zgradu, pa se ona koristi automatski.
-    if current_user.role == models.UserRole.company_admin:
-        if not meeting_in.building_id:
-            raise HTTPException(status_code=400, detail="Morate izabrati zgradu za koju kreirate sastanak")
+    # I admin i company_admin sada mogu da vode vise zgrada, pa oboje MORAJU
+    # da kazu za koju zgradu je sastanak - OSIM ako vode tacno jednu (tada se
+    # ona bira automatski, radi jednostavnosti kad nema dileme).
+    managed_ids = auth.get_managed_building_ids(db, current_user)
+
+    if meeting_in.building_id:
         target_building_id = meeting_in.building_id
+    elif len(managed_ids) == 1:
+        target_building_id = managed_ids[0]
+    elif len(managed_ids) == 0:
+        raise HTTPException(status_code=400, detail="Prvo morate kreirati/pridruziti se zgradi")
     else:
-        if not current_user.building_id:
-            raise HTTPException(status_code=400, detail="Prvo morate kreirati/pridruziti se zgradi")
-        target_building_id = current_user.building_id
+        raise HTTPException(status_code=400, detail="Vodite vise zgrada - morate izabrati za koju je sastanak")
 
     building = db.query(models.Building).filter(models.Building.id == target_building_id).first()
-    if not building or not auth.can_manage_building(current_user, building):
+    if not building or not auth.can_manage_building(db, current_user, building):
         raise HTTPException(status_code=403, detail="Nemate prava upravljanja ovom zgradom")
 
     meeting = models.Meeting(
@@ -57,18 +60,22 @@ def list_meetings(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    if current_user.role == models.UserRole.company_admin:
-        # Upravnik moze da vidi sastanke SVIH svojih zgrada, ili filtrira po jednoj
-        query = db.query(models.Meeting).join(models.Building).filter(
-            models.Building.management_company_id == current_user.company_id
-        )
+    if current_user.role in (models.UserRole.company_admin, models.UserRole.admin):
+        # Upravnik/predsednik moze da vidi sastanke SVIH svojih zgrada, ili filtrira po jednoj
+        managed_ids = auth.get_managed_building_ids(db, current_user)
+        query = db.query(models.Meeting).filter(models.Meeting.building_id.in_(managed_ids))
         if building_id:
             query = query.filter(models.Meeting.building_id == building_id)
         return query.order_by(models.Meeting.scheduled_at.desc()).all()
 
+    # Stanar - sastanci u zgradama gde ima bar jedan stan
+    apartment_building_ids = (
+        db.query(models.Apartment.building_id).filter(models.Apartment.owner_id == current_user.id).all()
+    )
+    building_ids = [b[0] for b in apartment_building_ids]
     return (
         db.query(models.Meeting)
-        .filter(models.Meeting.building_id == current_user.building_id)
+        .filter(models.Meeting.building_id.in_(building_ids))
         .order_by(models.Meeting.scheduled_at.desc())
         .all()
     )
@@ -96,7 +103,7 @@ def activate_meeting(
     meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
     if not meeting:
         raise HTTPException(status_code=404, detail="Sastanak nije pronadjen")
-    if not auth.can_manage_building(current_user, meeting.building):
+    if not auth.can_manage_building(db, current_user, meeting.building):
         raise HTTPException(status_code=403, detail="Nemate prava upravljanja ovim sastankom")
     meeting.status = models.MeetingStatus.active
     db.commit()
@@ -114,7 +121,7 @@ def close_meeting(
     meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
     if not meeting:
         raise HTTPException(status_code=404, detail="Sastanak nije pronadjen")
-    if not auth.can_manage_building(current_user, meeting.building):
+    if not auth.can_manage_building(db, current_user, meeting.building):
         raise HTTPException(status_code=403, detail="Nemate prava upravljanja ovim sastankom")
     meeting.status = models.MeetingStatus.closed
     db.commit()

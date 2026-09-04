@@ -48,3 +48,39 @@ button.danger { background: #dc2626; }
 .badge.scheduled { background: #fef3c7; color: #92400e; }
 .badge.active { background: #d1fae5; color: #065f46; }
 .badge.closed { background: #e5e7eb; color: #374151; }
+
+.role-select {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.role-option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.role-option.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+.role-option input[type="radio"] {
+  width: auto;
+  margin: 4px 0 0 0;
+}
+.role-option strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+.role-option p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}

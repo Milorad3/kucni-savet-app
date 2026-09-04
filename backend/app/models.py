@@ -29,6 +29,22 @@ class VoteChoice(str, enum.Enum):
     abstain = "abstain"
 
 
+class BuildingAdmin(Base):
+    """
+    Many-to-many veza: koje zgrade jedan 'admin' (predsednik) vodi.
+    Zamenjuje staro ogranicenje 'jedan predsednik = jedna zgrada' -
+    sada predsednik moze da vodi vise zgrada bez potrebe da pravi formalnu firmu.
+    """
+    __tablename__ = "building_admins"
+    id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    building_id = Column(UUID(as_uuid=False), ForeignKey("buildings.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=False), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    building = relationship("Building", back_populates="admin_links")
+    user = relationship("User", back_populates="managed_building_links")
+
+
 class ManagementCompany(Base):
     """Firma koja profesionalno upravlja sa vise zgrada (npr. 'Upravnik doo')."""
     __tablename__ = "management_companies"
@@ -54,6 +70,7 @@ class Building(Base):
     management_company = relationship("ManagementCompany", back_populates="buildings")
     apartments = relationship("Apartment", back_populates="building")
     meetings = relationship("Meeting", back_populates="building")
+    admin_links = relationship("BuildingAdmin", back_populates="building")
 
 
 class User(Base):
@@ -63,7 +80,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.resident)
-    # Za stanare/predsednike jedne zgrade:
+    # NAPOMENA: building_id ostaje samo kao "podrazumevana/prva zgrada" radi kompatibilnosti
+    # sa starijim delovima koda. Stvarna lista zgrada koje admin vodi je u building_admins tabeli.
     building_id = Column(UUID(as_uuid=False), ForeignKey("buildings.id"), nullable=True)
     # Za zaposlene u firmi koja upravlja vise zgrada (company_admin):
     company_id = Column(UUID(as_uuid=False), ForeignKey("management_companies.id"), nullable=True)
@@ -72,6 +90,7 @@ class User(Base):
     apartments = relationship("Apartment", back_populates="owner")
     votes = relationship("Vote", back_populates="user")
     company = relationship("ManagementCompany", back_populates="employees")
+    managed_building_links = relationship("BuildingAdmin", back_populates="user")
 
 
 class Apartment(Base):

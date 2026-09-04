@@ -68,14 +68,31 @@ def require_company_admin(user: models.User = Depends(get_current_user)) -> mode
     return user
 
 
-def can_manage_building(user: models.User, building: models.Building) -> bool:
+def can_manage_building(db, user: models.User, building: models.Building) -> bool:
     """
     Centralna provera: da li ovaj korisnik sme da upravlja OVOM konkretnom zgradom.
     - company_admin: da, ako je zgrada pod njegovom firmom (vidi SVE zgrade firme)
-    - admin: da, samo ako je to njegova jedina, sopstvena zgrada
+    - admin: da, ako je AKTIVNO povezan sa tom zgradom preko building_admins tabele
+      (jedan admin/predsednik sada moze da vodi VISE zgrada, ne samo jednu)
     """
     if user.role == models.UserRole.company_admin:
         return building.management_company_id is not None and building.management_company_id == user.company_id
     if user.role == models.UserRole.admin:
-        return building.id == user.building_id
+        link = (
+            db.query(models.BuildingAdmin)
+            .filter(models.BuildingAdmin.user_id == user.id, models.BuildingAdmin.building_id == building.id)
+            .first()
+        )
+        return link is not None
     return False
+
+
+def get_managed_building_ids(db, user: models.User) -> list:
+    """Vraca listu ID-jeva svih zgrada kojima korisnik sme da upravlja."""
+    if user.role == models.UserRole.company_admin:
+        rows = db.query(models.Building.id).filter(models.Building.management_company_id == user.company_id).all()
+        return [r[0] for r in rows]
+    if user.role == models.UserRole.admin:
+        rows = db.query(models.BuildingAdmin.building_id).filter(models.BuildingAdmin.user_id == user.id).all()
+        return [r[0] for r in rows]
+    return []

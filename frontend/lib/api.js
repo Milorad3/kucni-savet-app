@@ -33,6 +33,7 @@ export const api = {
     request(`/companies/${companyId}/buildings`, { method: "POST", body: JSON.stringify(data) }),
 
   createBuilding: (data) => request("/buildings", { method: "POST", body: JSON.stringify(data) }),
+  listMyBuildings: () => request("/buildings/mine"),
   addApartment: (buildingId, data) =>
     request(`/buildings/${buildingId}/apartments`, { method: "POST", body: JSON.stringify(data) }),
 

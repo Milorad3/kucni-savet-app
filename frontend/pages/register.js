@@ -3,7 +3,26 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { api, saveToken } from "../lib/api";
 
+const ACCOUNT_TYPES = [
+  {
+    id: "admin",
+    title: "Predsednik/predsednica saveta",
+    description: "Vodim jednu zgradu - zakazujem sastanke i glasanja za svoju zgradu.",
+  },
+  {
+    id: "company",
+    title: "Firma - upravnik zgrada",
+    description: "Moja firma profesionalno upravlja sa vise zgrada odjednom.",
+  },
+  {
+    id: "resident",
+    title: "Stanar/vlasnik stana",
+    description: "Predsednik ili firma ce me dodati kao vlasnika stana u svojoj zgradi.",
+  },
+];
+
 export default function Register() {
+  const [accountType, setAccountType] = useState("admin");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,7 +36,16 @@ export default function Register() {
       await api.register({ full_name: fullName, email, password });
       const res = await api.login({ email, password });
       saveToken(res.access_token);
-      router.push("/dashboard");
+
+      // Kljucni deo - odmah nakon registracije vodi na PRAVI sledeci korak,
+      // umesto na prazan dashboard koji zbunjuje ("zasto pise stanar?").
+      if (accountType === "admin") {
+        router.push("/buildings/new");
+      } else if (accountType === "company") {
+        router.push("/companies/new");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -26,6 +54,29 @@ export default function Register() {
   return (
     <div className="container">
       <h1>Registracija</h1>
+      <p>Prvo izaberi ko si, pa cemo te odvesti na pravi korak.</p>
+
+      <div className="role-select">
+        {ACCOUNT_TYPES.map((type) => (
+          <label
+            key={type.id}
+            className={`role-option ${accountType === type.id ? "selected" : ""}`}
+          >
+            <input
+              type="radio"
+              name="accountType"
+              value={type.id}
+              checked={accountType === type.id}
+              onChange={() => setAccountType(type.id)}
+            />
+            <div>
+              <strong>{type.title}</strong>
+              <p>{type.description}</p>
+            </div>
+          </label>
+        ))}
+      </div>
+
       <div className="card">
         <form onSubmit={handleSubmit}>
           {error && <div className="error">{error}</div>}
@@ -50,11 +101,15 @@ export default function Register() {
             required
             minLength={8}
           />
-          <button type="submit">Registruj se</button>
+          <button type="submit">
+            {accountType === "admin" && "Registruj se i kreiraj zgradu"}
+            {accountType === "company" && "Registruj se i kreiraj firmu"}
+            {accountType === "resident" && "Registruj se"}
+          </button>
         </form>
       </div>
       <p>
-        Već imate nalog? <Link href="/login">Prijavite se</Link>
+        Vec imate nalog? <Link href="/login">Prijavite se</Link>
       </p>
     </div>
   );

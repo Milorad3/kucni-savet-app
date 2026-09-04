@@ -32,7 +32,5 @@ services:
     plan: free
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: kucni-savet-backend
-          type: web
-          property: hostport
+        sync: false  # RUCNO unosis javni URL backend servisa nakon njegovog deploy-a
+        # (fromService/hostport daje INTERNU adresu koja ne radi iz browsera - zato rucno)
