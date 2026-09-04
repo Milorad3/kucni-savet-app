@@ -53,8 +53,8 @@ export default function Register() {
 
   return (
     <div className="container">
-      <h1>Registracija</h1>
-      <p>Prvo izaberi ko si, pa cemo te odvesti na pravi korak.</p>
+      <h1>Dobrodošli</h1>
+      <p>Recite nam ukratko ko ste, da vas odvedemo na pravo mesto:</p>
 
       <div className="role-select">
         {ACCOUNT_TYPES.map((type) => (

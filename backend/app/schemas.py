@@ -135,3 +135,14 @@ class VoteResult(BaseModel):
     abstain_percentage: float
     quorum_reached: bool
     passed: bool
+
+
+# ---- Document ----
+class DocumentOut(BaseModel):
+    id: str
+    filename: str
+    category: str
+    uploaded_at: datetime
+
+    class Config:
+        from_attributes = True

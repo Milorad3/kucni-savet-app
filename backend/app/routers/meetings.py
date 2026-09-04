@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from .. import models, schemas, auth
+from .. import models, schemas, auth, email_utils
 from ..database import get_db
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
@@ -108,6 +109,14 @@ def activate_meeting(
     meeting.status = models.MeetingStatus.active
     db.commit()
     db.refresh(meeting)
+
+    # Obavesti sve vlasnike stanova da je glasanje otvoreno (best-effort - ako email
+    # nije podesen na serveru, ovo se samo preskace, ne rusi aktivaciju sastanka)
+    try:
+        email_utils.notify_meeting_activated(db, meeting, meeting.building)
+    except Exception:
+        pass
+
     return meeting
 
 
@@ -127,3 +136,65 @@ def close_meeting(
     db.commit()
     db.refresh(meeting)
     return meeting
+
+
+@router.get("/{meeting_id}/minutes-pdf")
+def download_minutes_pdf(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Generise PDF zapisnik sastanka - naslov, dnevni red, rezultati glasanja po tacki."""
+    from fpdf import FPDF
+    from .votes import calculate_meeting_results
+
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Sastanak nije pronadjen")
+
+    results_by_item = {r.agenda_item_id: r for r in calculate_meeting_results(db, meeting)}
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.multi_cell(0, 10, "Zapisnik sastanka kucnog saveta")
+    pdf.ln(2)
+
+    pdf.set_font("Helvetica", "", 11)
+    pdf.multi_cell(0, 7, f"Zgrada: {meeting.building.name} ({meeting.building.address})")
+    pdf.multi_cell(0, 7, f"Sastanak: {meeting.title}")
+    pdf.multi_cell(0, 7, f"Datum: {meeting.scheduled_at.strftime('%d.%m.%Y %H:%M')}")
+    pdf.multi_cell(0, 7, f"Status: {'Zavrsen' if meeting.status == models.MeetingStatus.closed else 'U toku'}")
+    if meeting.description:
+        pdf.multi_cell(0, 7, f"Opis: {meeting.description}")
+    pdf.ln(4)
+
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.multi_cell(0, 8, "Dnevni red i rezultati glasanja")
+    pdf.ln(1)
+
+    for idx, item in enumerate(meeting.agenda_items, start=1):
+        r = results_by_item.get(item.id)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.multi_cell(0, 7, f"{idx}. {item.title}")
+        pdf.set_font("Helvetica", "", 10)
+        if item.description:
+            pdf.multi_cell(0, 6, f"   {item.description}")
+        if r:
+            pdf.multi_cell(
+                0, 6,
+                f"   Za: {r.for_percentage}%   Protiv: {r.against_percentage}%   Uzdrzan: {r.abstain_percentage}%"
+            )
+            pdf.multi_cell(0, 6, f"   Kvorum: {'Postignut' if r.quorum_reached else 'Nije postignut'}")
+            if meeting.status == models.MeetingStatus.closed:
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.multi_cell(0, 6, f"   Odluka: {'DONETA' if r.passed else 'NIJE DONETA'}")
+        pdf.ln(3)
+
+    pdf_bytes = bytes(pdf.output())
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="zapisnik-{meeting.id}.pdf"'},
+    )

@@ -72,6 +72,11 @@ export default function MeetingDetail() {
       {user?.role === "admin" && meeting.status === "active" && (
         <button className="danger" onClick={handleClose}>Zatvori glasanje i finalizuj</button>
       )}
+      {(meeting.status === "active" || meeting.status === "closed") && (
+        <button className="secondary" onClick={() => api.downloadMinutesPdf(id).catch((e) => setError(e.message))}>
+          📄 Preuzmi zapisnik (PDF)
+        </button>
+      )}
 
       <h3>Dnevni red</h3>
       {meeting.agenda_items.map((item) => {

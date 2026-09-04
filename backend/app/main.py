@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from . import models
 from .database import engine
-from .routers import auth as auth_router, buildings, meetings, votes, companies
+from .routers import auth as auth_router, buildings, meetings, votes, companies, documents
 
 # Kreira tabele u bazi ako ne postoje (za produkciju se preporucuje Alembic za migracije)
 models.Base.metadata.create_all(bind=engine)
@@ -23,6 +23,7 @@ app.include_router(companies.router)
 app.include_router(buildings.router)
 app.include_router(meetings.router)
 app.include_router(votes.router)
+app.include_router(documents.router)
 
 
 @app.get("/health")

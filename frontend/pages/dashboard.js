@@ -85,6 +85,11 @@ export default function Dashboard() {
           <button className="secondary" style={{ marginBottom: 8 }}>Upravljaj stanovima</button>
         </Link>
       )}
+      {user?.role === "admin" && user?.building_id && (
+        <Link href={`/buildings/${user.building_id}/documents`}>
+          <button className="secondary" style={{ marginBottom: 8 }}>Dokumenti</button>
+        </Link>
+      )}
       {user?.role === "admin" && (
         <Link href="/buildings/new">
           <button className="secondary" style={{ marginBottom: 16 }}>+ Vodim još jednu zgradu</button>

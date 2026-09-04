@@ -59,6 +59,9 @@ export default function CompanyDashboard() {
           <Link href={`/buildings/${b.id}/apartments`}>
             <button className="secondary">Upravljaj stanovima</button>
           </Link>
+          <Link href={`/buildings/${b.id}/documents`}>
+            <button className="secondary">Dokumenti</button>
+          </Link>
         </div>
       ))}
 

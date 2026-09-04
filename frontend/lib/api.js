@@ -48,6 +48,42 @@ export const api = {
   vote: (agendaItemId, choice) =>
     request(`/agenda-items/${agendaItemId}/vote`, { method: "POST", body: JSON.stringify({ choice }) }),
   getResults: (meetingId) => request(`/meetings/${meetingId}/results`),
+
+  uploadDocument: async (buildingId, file, category) => {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("category", category || "ostalo");
+    const res = await fetch(`${API_URL}/buildings/${buildingId}/documents`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Greska" }));
+      throw new Error(err.detail || "Greska pri otpremanju");
+    }
+    return res.json();
+  },
+  listDocuments: (buildingId) => request(`/buildings/${buildingId}/documents`),
+  getDocumentDownloadUrl: (documentId) => request(`/documents/${documentId}/download-url`),
+
+  downloadMinutesPdf: async (meetingId) => {
+    const token = getToken();
+    const res = await fetch(`${API_URL}/meetings/${meetingId}/minutes-pdf`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error("Preuzimanje PDF-a nije uspelo");
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `zapisnik-${meetingId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export function saveToken(token) {

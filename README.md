@@ -51,9 +51,36 @@ Terraform kod je u `infra/aws-terraform-main.tf` - pogledaj prethodno objašnjen
 
 ## Šta nedostaje za produkciju (sledeći koraci)
 
-- UI za dodavanje stanova/vlasnika (trenutno samo API)
-- Generisanje PDF zapisnika
-- Email/push notifikacije za pozive na sastanak
-- Upload dokumenata (S3 integracija - kod za IAM/S3 već postoji u Terraform-u)
+- ✅ ~~UI za dodavanje stanova~~ — gotovo (`/buildings/[id]/apartments`)
+- ✅ ~~Generisanje PDF zapisnika~~ — gotovo (dugme na stranici sastanka)
+- ✅ ~~Email notifikacije~~ — gotovo, ALI zahteva SMTP podešavanje (vidi ispod)
+- ✅ ~~Upload dokumenata~~ — gotovo, ALI zahteva S3 podešavanje (vidi ispod)
 - Alembic migracije baze (umesto auto-create tabela)
 - Testovi (unit/integration)
+
+## Podešavanje email notifikacija (opciono)
+
+Bez ovoga, aplikacija radi normalno, samo ne šalje email pozive na glasanje.
+
+Na Render → `kucni-savet-backend` → Environment, dodaj:
+- `SMTP_HOST` (npr. `smtp.gmail.com`)
+- `SMTP_PORT` (obično `587`)
+- `SMTP_USER` (tvoj email)
+- `SMTP_PASSWORD` (za Gmail: mora biti "App Password", ne obična lozinka — Google nalog → Security → App Passwords)
+- `FROM_EMAIL` (email koji se prikazuje kao pošiljalac)
+- `FRONTEND_URL` (npr. `https://kucni-savet-frontend.onrender.com` — da link u email-u radi)
+
+Alternativa Gmail-u: SendGrid, Resend, Mailgun — svi imaju SMTP pristup sa sličnim podešavanjem.
+
+## Podešavanje upload dokumenata (opciono)
+
+Bez ovoga, dugme za upload postoji ali javlja jasnu grešku da skladište nije podešeno.
+
+Na Render → `kucni-savet-backend` → Environment, dodaj:
+- `S3_BUCKET_NAME`
+- `S3_REGION` (npr. `eu-central-1`)
+- `S3_ACCESS_KEY_ID`
+- `S3_SECRET_ACCESS_KEY`
+- `S3_ENDPOINT_URL` — OSTAVI PRAZNO za AWS S3. Popuni samo ako koristiš Cloudflare R2 ili Backblaze B2 (jeftinije alternative, S3-kompatibilne)
+
+Najjeftinija opcija za mali obim: **Cloudflare R2** (nema naplate za download saobraćaj, za razliku od AWS S3).

@@ -142,3 +142,19 @@ class Vote(Base):
 
     agenda_item = relationship("AgendaItem", back_populates="votes")
     user = relationship("User", back_populates="votes")
+
+
+class Document(Base):
+    """Dokumenti zgrade - fakture, ugovori, odluke. Fajl se cuva u S3 (ili S3-kompatibilnom
+    servisu), ovde se cuva samo metapodatak i putanja do fajla."""
+    __tablename__ = "documents"
+    id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    building_id = Column(UUID(as_uuid=False), ForeignKey("buildings.id"), nullable=False)
+    uploaded_by_id = Column(UUID(as_uuid=False), ForeignKey("users.id"), nullable=True)
+    filename = Column(String, nullable=False)
+    storage_key = Column(String, nullable=False)  # putanja/kljuc unutar S3 bucket-a
+    category = Column(String, default="ostalo")   # npr. faktura, ugovor, zapisnik, ostalo
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    building = relationship("Building")
+    uploaded_by = relationship("User")
