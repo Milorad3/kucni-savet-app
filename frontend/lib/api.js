@@ -36,6 +36,8 @@ export const api = {
   listMyBuildings: () => request("/buildings/mine"),
   addApartment: (buildingId, data) =>
     request(`/buildings/${buildingId}/apartments`, { method: "POST", body: JSON.stringify(data) }),
+  listApartments: (buildingId) => request(`/buildings/${buildingId}/apartments`),
+  getBuilding: (buildingId) => request(`/buildings/${buildingId}`),
 
   createMeeting: (data) => request("/meetings", { method: "POST", body: JSON.stringify(data) }),
   listMeetings: (buildingId) => request(buildingId ? `/meetings?building_id=${buildingId}` : "/meetings"),

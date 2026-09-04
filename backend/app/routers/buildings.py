@@ -65,6 +65,18 @@ def list_my_buildings(
     return results
 
 
+@router.get("/{building_id}", response_model=schemas.BuildingOut)
+def get_building(
+    building_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    building = db.query(models.Building).filter(models.Building.id == building_id).first()
+    if not building:
+        raise HTTPException(status_code=404, detail="Zgrada nije pronadjena")
+    return building
+
+
 @router.post("/{building_id}/apartments", response_model=schemas.ApartmentOut)
 def add_apartment(
     building_id: str,

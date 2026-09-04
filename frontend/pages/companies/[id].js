@@ -56,6 +56,9 @@ export default function CompanyDashboard() {
           <Link href={`/meetings/new?building_id=${b.id}`}>
             <button>+ Novi sastanak za ovu zgradu</button>
           </Link>
+          <Link href={`/buildings/${b.id}/apartments`}>
+            <button className="secondary">Upravljaj stanovima</button>
+          </Link>
         </div>
       ))}
 

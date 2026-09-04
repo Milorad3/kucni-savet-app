@@ -12,8 +12,10 @@ export default function NewBuilding() {
     e.preventDefault();
     setError("");
     try {
-      await api.createBuilding({ name, address });
-      router.push("/dashboard");
+      const building = await api.createBuilding({ name, address });
+      // Logican sledeci korak posle kreiranja zgrade je odmah dodavanje stanova,
+      // ne prazan dashboard.
+      router.push(`/buildings/${building.id}/apartments`);
     } catch (err) {
       setError(err.message);
     }
